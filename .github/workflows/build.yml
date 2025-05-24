@@ -18,7 +18,10 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglib2.0-dev pkg-config
+          sudo apt-get install -y \
+            libglib2.0-dev \        # GLib 依赖
+            libasound2-dev \        # ALSA 依赖
+            pkg-config              # pkg-config 工具
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
