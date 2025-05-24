@@ -11,7 +11,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: 安装 Rust 工具链
         uses: dtolnay/rust-toolchain@stable
@@ -30,17 +30,13 @@ jobs:
           $env:LIB = "C:\tools\msys64\mingw64\lib;$env:LIB"
           $env:INCLUDE = "C:\tools\msys64\mingw64\include;$env:INCLUDE"
 
-      - name: 列出 FFmpeg DLL 文件
-        run: |
-          Get-ChildItem "C:\tools\msys64\mingw64\bin\av*.dll"
-
-      - name: 移除 feature 标志（prpr/src/lib.rs）
+      - name: 移除 `#![feature(local_key_cell_methods)]`
         run: |
           (Get-Content prpr/src/lib.rs) | ForEach-Object {
             $_ -replace '#!$$feature$$local_key_cell_methods$$', ''
           } | Set-Content prpr/src/lib.rs
 
-      - name: 添加 allow(dead_code) 到 AVProbeData
+      - name: 添加 `#[allow(dead_code)]` 到 AVProbeData
         run: |
           (Get-Content prpr-avc/src/ffi.rs) | ForEach-Object {
             if ($_ -match '^pub struct AVProbeData') {
@@ -55,15 +51,14 @@ jobs:
           cargo build --release --package prpr-avc
           cargo build --release --package phira-main
 
-      - name: 打包 .exe 和依赖 DLL
+      - name: 自动检测并打包 FFmpeg DLL
         run: |
           $exePath = "target\release\phira-main.exe"
           $ffmpegDlls = @(
-            "avformat-60.dll",
-            "avcodec-60.dll",
-            "avutil-58.dll",
-            "swscale-6.dll"
-          )
+            (Get-ChildItem "C:\tools\msys64\mingw64\bin\avformat-*.dll").Name
+            (Get-ChildItem "C:\tools\msys64\mingw64\bin\avcodec-*.dll").Name
+            (Get-ChildItem "C:\tools\msys64\mingw64\bin\avutil-*.dll").Name
+          ) | Sort-Object -Unique
           $destDir = "windows-build"
           New-Item -ItemType Directory -Path $destDir
           Copy-Item -Path $exePath -Destination $destDir
@@ -72,7 +67,7 @@ jobs:
           }
 
       - name: 上传构建产物
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: windows-binary
           path: windows-build/
