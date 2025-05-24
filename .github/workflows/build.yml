@@ -1,4 +1,4 @@
-name: Build Windows Binary
+name: Build Windows Binary (Native)
 
 on:
   push:
@@ -8,40 +8,51 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: 安装 MingW-w64
-        run: sudo apt-get install -y mingw-w64
-
-      - name: 安装 Rust
+      - name: 安装 Rust 工具链
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable-x86_64-unknown-linux-gnu
+          toolchain: stable-x86_64-pc-windows-msvc
 
-      - name: 添加 Windows 目标架构
-        run: rustup target add x86_64-pc-windows-gnu
-
-      - name: 下载并解压 FFmpeg
+      - name: 安装 MSYS2（用于 FFmpeg 依赖）
         run: |
-          curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz  | tar xJ
-          export FFMPEG_DIR=$(pwd)/ffmpeg-6.0-amd64-static
+          choco install -y msys2
+          refreshenv
+          $env:Path += ";C:\tools\msys64\usr\bin"
+          pacman -Sy --noconfirm mingw-w64-x86_64-ffmpeg
 
-      - name: 设置链接器环境变量
+      - name: 设置 FFmpeg 环境变量
         run: |
-          export X86_64_PC_WINDOWS_GNU_AVFORMAT_LIB_DIR=${FFMPEG_DIR}/lib
-          export X86_64_PC_WINDOWS_GNU_AVFORMAT_INCLUDE_DIR=${FFMPEG_DIR}/include
-          export X86_64_PC_WINDOWS_GNU_AVFORMAT_STATIC=1
+          $env:LIB = "C:\tools\msys64\mingw64\lib;$env:LIB"
+          $env:INCLUDE = "C:\tools\msys64\mingw64\include;$env:INCLUDE"
 
-      - name: 构建 Windows 二进制文件
+      - name: 构建 prpr-avc 和 phira-main
         run: |
-          cargo build --target x86_64-pc-windows-gnu --release
-          cp target/x86_64-pc-windows-gnu/release/your_program.exe .
+          cargo build --release --package prpr-avc
+          cargo build --release --package phira-main
+
+      - name: 打包生成的 .exe 和依赖 DLL
+        run: |
+          $exePath = "target\release\phira-main.exe"
+          $ffmpegDlls = @(
+            "avformat-59.dll",
+            "avcodec-59.dll",
+            "avutil-57.dll",
+            "swscale-6.dll"
+          )
+          $destDir = "windows-build"
+          New-Item -ItemType Directory -Path $destDir
+          Copy-Item -Path $exePath -Destination $destDir
+          foreach ($dll in $ffmpegDlls) {
+            Copy-Item -Path "C:\tools\msys64\mingw64\bin\$dll" -Destination $destDir
+          }
 
       - name: 上传构建产物
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: windows-binary
-          path: your_program.exe
+          path: windows-build/
