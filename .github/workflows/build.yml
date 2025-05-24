@@ -1,42 +1,29 @@
-name: Build Rust Project
+name: Rust CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main  # 在 main 分支有 push 时触发
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main  # 对 main 分支的 pull request 触发
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    runs-on: ubuntu-latest  # 使用 Ubuntu 环境来运行
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3  # 获取代码
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libglib2.0-dev \        # GLib 依赖
-            libasound2-dev \        # ALSA 依赖
-            pkg-config              # pkg-config 工具
+    - name: Set up Rust
+      uses: actions/setup-rust@v1  # 设置 Rust 环境
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
-          profile: minimal
-          url: https://mirrors.aliyun.com/rustup 
+    - name: Install dependencies
+      run: cargo install --path .  # 安装所有依赖
 
-      - name: Build project
-        run: cargo build --release
+    - name: Build
+      run: cargo build --release  # 编译程序
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-binaries
-          path: target/release/
+    - name: Run tests
+      run: cargo test  # 如果有测试的话，执行测试
