@@ -30,6 +30,10 @@ jobs:
           $env:LIB = "C:\tools\msys64\mingw64\lib;$env:LIB"
           $env:INCLUDE = "C:\tools\msys64\mingw64\include;$env:INCLUDE"
 
+      - name: 列出 FFmpeg DLL 文件
+        run: |
+          Get-ChildItem "C:\tools\msys64\mingw64\bin\av*.dll"
+
       - name: 移除 feature 标志（prpr/src/lib.rs）
         run: |
           (Get-Content prpr/src/lib.rs) | ForEach-Object {
@@ -55,9 +59,9 @@ jobs:
         run: |
           $exePath = "target\release\phira-main.exe"
           $ffmpegDlls = @(
-            "avformat-59.dll",
-            "avcodec-59.dll",
-            "avutil-57.dll",
+            "avformat-60.dll",
+            "avcodec-60.dll",
+            "avutil-58.dll",
             "swscale-6.dll"
           )
           $destDir = "windows-build"
