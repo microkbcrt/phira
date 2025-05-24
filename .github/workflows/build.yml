@@ -28,7 +28,7 @@ jobs:
         run: cargo build --release
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3.4.0
+        uses: actions/upload-artifact@v4
         with:
           name: release-binaries
           path: target/release/
