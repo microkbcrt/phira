@@ -18,7 +18,7 @@ jobs:
         with:
           toolchain: stable-x86_64-pc-windows-msvc
 
-      - name: 安装 MSYS2（用于 FFmpeg 依赖）
+      - name: 安装 MSYS2 和 FFmpeg
         run: |
           choco install -y msys2
           refreshenv
@@ -30,12 +30,28 @@ jobs:
           $env:LIB = "C:\tools\msys64\mingw64\lib;$env:LIB"
           $env:INCLUDE = "C:\tools\msys64\mingw64\include;$env:INCLUDE"
 
-      - name: 构建 prpr-avc 和 phira-main
+      - name: 移除 feature 标志（prpr/src/lib.rs）
+        run: |
+          (Get-Content prpr/src/lib.rs) | ForEach-Object {
+            $_ -replace '#!$$feature$$local_key_cell_methods$$', ''
+          } | Set-Content prpr/src/lib.rs
+
+      - name: 添加 allow(dead_code) 到 AVProbeData
+        run: |
+          (Get-Content prpr-avc/src/ffi.rs) | ForEach-Object {
+            if ($_ -match '^pub struct AVProbeData') {
+              "@[allow(dead_code)]`n$_"
+            } else {
+              $_
+            }
+          } | Set-Content prpr-avc/src/ffi.rs
+
+      - name: 构建项目
         run: |
           cargo build --release --package prpr-avc
           cargo build --release --package phira-main
 
-      - name: 打包生成的 .exe 和依赖 DLL
+      - name: 打包 .exe 和依赖 DLL
         run: |
           $exePath = "target\release\phira-main.exe"
           $ffmpegDlls = @(
