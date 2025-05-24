@@ -10,8 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      artifacts: write
+      contents: write  # ✅ 修正：删除 artifacts 字段
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -23,7 +22,7 @@ jobs:
           override: true
           components: rustfmt, clippy
           profile: minimal
-          url: https://mirrors.aliyun.com/rustup   # 使用阿里云镜像
+          url: https://mirrors.aliyun.com/rustup 
 
       - name: Build project
         run: cargo build --release
