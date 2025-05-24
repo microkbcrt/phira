@@ -3,8 +3,8 @@ name: Build Windows Binary
 on:
   push:
     branches:
-      - main  # 触发构建的分支
-  workflow_dispatch:  # 允许手动触发
+      - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,7 +13,7 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: 安装 MingW-w64（用于交叉编译 Windows）
+      - name: 安装 MingW-w64
         run: sudo apt-get install -y mingw-w64
 
       - name: 安装 Rust
@@ -23,6 +23,17 @@ jobs:
 
       - name: 添加 Windows 目标架构
         run: rustup target add x86_64-pc-windows-gnu
+
+      - name: 下载并解压 FFmpeg
+        run: |
+          curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz  | tar xJ
+          export FFMPEG_DIR=$(pwd)/ffmpeg-6.0-amd64-static
+
+      - name: 设置链接器环境变量
+        run: |
+          export X86_64_PC_WINDOWS_GNU_AVFORMAT_LIB_DIR=${FFMPEG_DIR}/lib
+          export X86_64_PC_WINDOWS_GNU_AVFORMAT_INCLUDE_DIR=${FFMPEG_DIR}/include
+          export X86_64_PC_WINDOWS_GNU_AVFORMAT_STATIC=1
 
       - name: 构建 Windows 二进制文件
         run: |
