@@ -1,29 +1,36 @@
-name: Rust CI
+name: Build Windows Binary
 
 on:
   push:
     branches:
-      - main  # 在 main 分支有 push 时触发
-  pull_request:
-    branches:
-      - main  # 对 main 分支的 pull request 触发
+      - main  # 触发构建的分支
+  workflow_dispatch:  # 允许手动触发
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # 使用 Ubuntu 环境来运行
-
+    runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3  # 获取代码
+      - name: 检出代码
+        uses: actions/checkout@v4
 
-    - name: Set up Rust
-      uses: actions/setup-rust@v2  # 使用 v2 版本的 setup-rust
+      - name: 安装 MingW-w64（用于交叉编译 Windows）
+        run: sudo apt-get install -y mingw-w64
 
-    - name: Install dependencies
-      run: cargo install --path .  # 安装所有依赖
+      - name: 安装 Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable-x86_64-unknown-linux-gnu
 
-    - name: Build
-      run: cargo build --release  # 编译程序
+      - name: 添加 Windows 目标架构
+        run: rustup target add x86_64-pc-windows-gnu
 
-    - name: Run tests
-      run: cargo test  # 如果有测试的话，执行测试
+      - name: 构建 Windows 二进制文件
+        run: |
+          cargo build --target x86_64-pc-windows-gnu --release
+          cp target/x86_64-pc-windows-gnu/release/your_program.exe .
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-binary
+          path: your_program.exe
