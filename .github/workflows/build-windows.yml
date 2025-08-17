@@ -1,6 +1,6 @@
 # .github/workflows/build-windows.yml
 
-name: Build for Windows
+name: Build for Windows with vcpkg
 
 on:
   workflow_dispatch:
@@ -20,45 +20,33 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      # 第三步：安装 LLVM
-      - name: Install LLVM
-        uses: KyleMayes/install-llvm-action@v1
+      # 第三步 [全新]：使用 vcpkg 安装 MSVC 兼容的 FFmpeg
+      - name: Install FFmpeg using vcpkg
+        uses: an-tao/vcpkg-action@v3
         with:
-          version: '15'
+          # 我们需要 FFmpeg 的 x64-windows-static 版本
+          # 'static' 意味着所有库都会被直接编译进最终的 .exe 文件，无需附带 .dll
+          vcpkg_static: true
+          packages: ffmpeg
 
-      # 第四步 [已修正]：安装 FFmpeg 完整开发者版
-      # 我们使用 ffmpeg-shared 包，它包含了编译所需的 .lib 和 .h 文件
-      - name: Install FFmpeg (Full Developer Version)
-        run: choco install ffmpeg-shared -y
-
-      # 第五步 [已修正]：为编译器和运行时配置 FFmpeg 路径
-      # 现在路径指向了 ffmpeg-shared 的安装位置
-      - name: Configure FFmpeg environment
-        run: |
-          FFMPEG_PATH="C:/ProgramData/chocolatey/lib/ffmpeg-shared/tools"
-          echo "Using FFMPEG_PATH: $FFMPEG_PATH"
-          echo "FFMPEG_PATH=$FFMPEG_PATH" >> $GITHUB_ENV
-          echo "$FFMPEG_PATH/bin" >> $GITHUB_PATH
-          echo "LIB=$FFMPEG_PATH/lib" >> $GITHUB_ENV
-        shell: bash
-
-      # 第六步：缓存依赖项
+      # 第四步：缓存依赖项
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      # 第七步：编译项目
+      # 第五步：编译项目
+      # vcpkg-action 会自动设置所有必要的环境变量 (包括 LIB, PATH 等)
       - name: Build Phira
         run: cargo build --release
         shell: bash
 
-      # 第八步：准备打包文件
+      # 第六步：准备打包文件
       - name: Package assets
         run: |
           mkdir release
           cp target/release/phira.exe release/
           cp -r assets release/
 
-      # 第九步：上传构建产物
+      # 第七步：上传构建产物
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
