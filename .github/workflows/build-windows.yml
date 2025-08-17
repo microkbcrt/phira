@@ -1,4 +1,6 @@
-name: Build for Windows
+# .github/workflows/build-windows.yml
+
+name: Build for Windows with Diagnostics
 
 on:
   workflow_dispatch:
@@ -8,51 +10,76 @@ jobs:
     runs-on: windows-2022
 
     steps:
+      # 第一步：检出你的代码
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: 'recursive'
 
+      # 第二步：安装 Rust 工具链
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      # 第三步：安装 LLVM
       - name: Install LLVM
         uses: KyleMayes/install-llvm-action@v1
         with:
           version: '15'
 
-      # 改用vcpkg安装FFmpeg（包含静态库）
-      - name: Set up vcpkg
-        uses: microsoft/vcpkg-action@v5
-        with:
-          vcpkgVersion: '2023.12.12'
-          packages: ffmpeg[core,static]  # 明确安装静态库版本
-          triplet: x64-windows-static   # Windows静态链接三元组
-          gitCommitId: 'your-vcpkg-commit'  # 可选：指定vcpkg的具体commit
+      # 第四步：安装 FFmpeg
+      - name: Install FFmpeg
+        run: choco install ffmpeg -y
 
-      # 配置FFmpeg库路径（vcpkg会自动设置相关环境变量）
-      - name: Configure FFmpeg paths
+      # ======================= 调试步骤开始 =======================
+
+      # 调试步骤 1: 确认 FFmpeg 的安装路径和文件结构
+      - name: '[DEBUG] Show FFmpeg Path and Directory Structure'
         run: |
-          echo "LIBRARY_PATH=$env:VCPKG_INSTALLED_DIR\x64-windows-static\lib" >> $env:GITHUB_ENV
-          echo "INCLUDE=$env:VCPKG_INSTALLED_DIR\x64-windows-static\include" >> $env:GITHUB_ENV
-          echo "LIB=$env:VCPKG_INSTALLED_DIR\x64-windows-static\lib" >> $env:GITHUB_ENV  # Windows原生库路径变量
+          echo "--- FFmpeg Install Path ---"
+          choco path ffmpeg --limit-output
+          echo "--- FFmpeg Directory Listing ---"
+          ls -R $(choco path ffmpeg --limit-output)
+        shell: bash
 
+      # 调试步骤 2: 确认 Rust 工具链信息
+      - name: '[DEBUG] Show Rust Toolchain Info'
+        run: rustc -vV
+        shell: bash
+
+      # 第五步：为编译器和运行时配置 FFmpeg 路径
+      - name: Configure FFmpeg environment
+        run: |
+          FFMPEG_PATH=$(choco path ffmpeg --limit-output)
+          echo "Discovered FFMPEG_PATH: $FFMPEG_PATH"
+          echo "FFMPEG_PATH=$FFMPEG_PATH" >> $GITHUB_ENV
+          echo "$FFMPEG_PATH/bin" >> $GITHUB_PATH
+          echo "LIB=$FFMPEG_PATH/lib" >> $GITHUB_ENV
+        shell: bash
+
+      # 调试步骤 3: 检查编译前的所有环境变量
+      - name: '[DEBUG] Show Environment Variables before Build'
+        run: env | sort
+        shell: bash
+
+      # ======================= 调试步骤结束 =======================
+
+      # 第六步：缓存依赖项
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Build Phira
-        run: cargo build --release
-        env:
-          RUSTFLAGS: "-C target-feature=+crt-static"
-          VCPKG_ROOT: "${{ github.workspace }}/vcpkg"
-          VCPKGRS_DYNAMIC: "0"  # 使用静态链接（关键修改）
+      # 第七步：编译项目 (使用超详细模式)
+      - name: Build Phira (Very Verbose)
+        run: cargo build -vv --release
+        shell: bash
 
+      # 第八步：准备打包文件 (如果编译成功)
       - name: Package assets
         run: |
           mkdir release
           cp target/release/phira.exe release/
           cp -r assets release/
 
+      # 第九步：上传构建产物 (如果编译成功)
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
