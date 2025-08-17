@@ -9,13 +9,13 @@ on:
 
 jobs:
   build-windows:
-    # 指定运行器环境为最新的 Windows Server
-    runs-on: windows-latest
+    # 明确指定运行器为 Windows Server 2022，避免未来系统更新带来的问题
+    runs-on: windows-2022
 
     steps:
       # 第一步：检出你的代码
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # 升级到 v4 版本
         with:
           submodules: 'recursive'
 
@@ -23,12 +23,11 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      # 第三步：安装 LLVM (已修正)
-      # 使用了一个当前有效且被广泛使用的 Action 来安装 LLVM
+      # 第三步：安装 LLVM
       - name: Install LLVM
         uses: KyleMayes/install-llvm-action@v1
         with:
-          version: '15' # Phira 项目依赖 LLVM 15 版本
+          version: '15'
 
       # 第四步：缓存依赖项
       - name: Cache dependencies
@@ -49,9 +48,10 @@ jobs:
           cp target/release/phira.exe release/
           cp -r assets release/
 
-      # 第七步：上传构建产物
+      # 第七步：上传构建产物 (已升级到 v4)
+      # 使用最新版本的 actions/upload-artifact
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: phira-windows-build
           path: release/
