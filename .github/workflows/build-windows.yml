@@ -10,50 +10,38 @@ jobs:
     runs-on: windows-2022
 
     steps:
-      # 第一步：检出代码
+      # 前六步保持不变，它们已经证明是成功的
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: 'recursive'
-
-      # 第二步：安装 Rust MinGW 工具链
       - name: Install Rust toolchain (MinGW)
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable-x86_64-pc-windows-gnu
-
-      # 第三步 [拼写已修正]：初始化 MSYS2 环境并安装 Perl
       - name: Setup MSYS2 and install Perl
-        uses: msys2/setup-msys2@v2 # <- 修正了这里的拼写错误
+        uses: msys2/setup-msys2@v2
         with:
           update: true
           install: perl
-
-      # 第四步：下载并解压官方文档指定的正确静态库
       - name: Download and extract OFFICIAL static libraries
         run: |
           curl -L -o prpr-avc.zip "https://teamflos.github.io/phira-docs/phira_build_guide/prpr-avc.zip"
           unzip -o prpr-avc.zip
         shell: bash
-
-      # 第五步：缓存 Rust 依赖项
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
-
-      # 第六步：编译项目 (使用官方命令)
       - name: Build Phira
         run: cargo build --release --bin phira-main
         shell: bash
 
-      # 第-七步：准备打包文件
+      # 第七步 [已修正]：准备打包文件
       - name: Package assets
         run: |
           # 确保目标目录存在
           mkdir -p target/release/assets
-          # 将 assets 文件夹的内容复制到 target/release/assets
+          # 将根目录的 assets 文件夹的内容，复制到 target/release/ 目录下的新 assets 文件夹中
           cp -r assets/* target/release/assets/
-          # 将编译好的主程序也复制过来
-          cp target/release/phira-main.exe target/release/
         shell: bash
 
       # 第八步：上传构建产物
@@ -61,5 +49,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: phira-windows-build
-          # 我们上传整个 release 文件夹，里面包含了 exe 和 assets
+          # 我们上传整个 release 文件夹，里面已经包含了 phira-main.exe 和 assets 文件夹
           path: target/release/
