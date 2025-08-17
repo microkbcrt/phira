@@ -20,21 +20,26 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      # 第三步 [全新]：使用 vcpkg 安装 MSVC 兼容的 FFmpeg
+      # 第三步 [最终修正]：使用您找到的 johnwason/vcpkg-action 安装 FFmpeg
       - name: Install FFmpeg using vcpkg
-        uses: an-tao/vcpkg-action@v3
+        uses: johnwason/vcpkg-action@v7
+        id: vcpkg
         with:
-          # 我们需要 FFmpeg 的 x64-windows-static 版本
-          # 'static' 意味着所有库都会被直接编译进最终的 .exe 文件，无需附带 .dll
-          vcpkg_static: true
-          packages: ffmpeg
-
-      # 第四步：缓存依赖项
+          # 需要安装的包
+          pkgs: ffmpeg
+          # 关键参数：这个目标平台必须和 Rust MSVC 工具链的运行时库完全匹配
+          # x64-windows-static-md 是最安全、最正确的选择
+          triplet: x64-windows-static-md
+          # 根据文档建议，提供 token 以免达到 GitHub API 的速率限制
+          token: ${{ github.token }}
+          
+      # 第四步：缓存 Rust 依赖项
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
       # 第五步：编译项目
-      # vcpkg-action 会自动设置所有必要的环境变量 (包括 LIB, PATH 等)
+      # johnwason/vcpkg-action 会自动设置好 VCPKG_ROOT 环境变量
+      # Cargo 会自动检测到这个变量并找到 vcpkg 安装的库
       - name: Build Phira
         run: cargo build --release
         shell: bash
