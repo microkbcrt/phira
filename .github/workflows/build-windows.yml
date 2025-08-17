@@ -2,20 +2,17 @@
 
 name: Build for Windows
 
-# 控制工作流的触发条件
 on:
-  # 允许你从 Actions 标签页手动触发此工作流
   workflow_dispatch:
 
 jobs:
   build-windows:
-    # 明确指定运行器为 Windows Server 2022，避免未来系统更新带来的问题
     runs-on: windows-2022
 
     steps:
       # 第一步：检出你的代码
       - name: Checkout repository
-        uses: actions/checkout@v4 # 升级到 v4 版本
+        uses: actions/checkout@v4
         with:
           submodules: 'recursive'
 
@@ -33,9 +30,10 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      # 第五步：编译项目
+      # 第五步：编译项目 (已修正)
+      # 直接在工作区根目录运行构建，这将生成所有可执行文件
       - name: Build Phira
-        run: cargo build --release --package phira
+        run: cargo build --release
         env:
           RUSTFLAGS: "-C target-feature=+crt-static"
           VCPKG_ROOT: "${{ github.workspace }}/vcpkg"
@@ -48,8 +46,7 @@ jobs:
           cp target/release/phira.exe release/
           cp -r assets release/
 
-      # 第七步：上传构建产物 (已升级到 v4)
-      # 使用最新版本的 actions/upload-artifact
+      # 第七步：上传构建产物
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
