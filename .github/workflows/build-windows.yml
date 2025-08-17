@@ -5,9 +5,8 @@ name: Build for Windows (Official Guide Method)
 on:
   workflow_dispatch:
 
-jobs:
+jobs F
   build-windows:
-    # 我们仍然使用 Windows runner，因为它提供了我们需要的所有环境
     runs-on: windows-2022
 
     steps:
@@ -18,25 +17,25 @@ jobs:
           submodules: 'recursive'
 
       # 第二步：安装 Rust MinGW 工具链
-      # 这是最关键的改动，我们不再使用默认的 MSVC，而是切换到官方指南暗示的 GNU (MinGW) 工具链
       - name: Install Rust toolchain (MinGW)
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable-x86_64-pc-windows-gnu
 
-      # 第三步：安装 Perl (openssl-sys 依赖)
-      # 使用 runner 环境预装的 MSYS2/pacman 来安装
-      - name: Install Perl
-        run: pacman -S --noconfirm perl
-        shell: msys2 {0}
+      # 第三步：初始化 MSYS2 环境并安装 Perl
+      - name: Setup MSYS2 and install Perl
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: perl
 
-      # 第四步：下载并解压官方提供的预编译静态库
-      - name: Download and extract pre-built static libraries
+      # 第四步 [最终修正]：下载并解压官方文档指定的正确静态库
+      - name: Download and extract OFFICIAL static libraries
         run: |
-          # 从官方缓存站下载 .zip 文件
-          curl -L -o static-lib.zip "https://build.prpr.moe/static-lib.zip"
+          # 使用您找到的、来自官方文档的正确链接
+          curl -L -o prpr-avc.zip "https://teamflos.github.io/phira-docs/phira_build_guide/prpr-avc.zip"
           # 解压到代码根目录，-o 选项表示覆盖所有文件
-          unzip -o static-lib.zip
+          unzip -o prpr-avc.zip
         shell: bash
 
       # 第五步：缓存 Rust 依赖项
@@ -52,10 +51,7 @@ jobs:
       - name: Package assets
         run: |
           mkdir -p target/release/assets
-          # 官方指南提到根目录的 assets 可能不全，但我们先按步骤复制
           cp -r assets/* target/release/assets/
-          # 将编译好的主程序也复制过来
-          cp target/release/phira-main.exe target/release/
         shell: bash
 
       # 第八步：上传构建产物
