@@ -1,12 +1,13 @@
 # .github/workflows/build-windows.yml
 
-name: Build for Windows with vcpkg
+name: Build for Windows (Official Guide Method)
 
 on:
   workflow_dispatch:
 
 jobs:
   build-windows:
+    # 我们仍然使用 Windows runner，因为它提供了我们需要的所有环境
     runs-on: windows-2022
 
     steps:
@@ -16,44 +17,50 @@ jobs:
         with:
           submodules: 'recursive'
 
-      # 第二步：安装 Rust 工具链
-      - name: Install Rust toolchain
+      # 第二步：安装 Rust MinGW 工具链
+      # 这是最关键的改动，我们不再使用默认的 MSVC，而是切换到官方指南暗示的 GNU (MinGW) 工具链
+      - name: Install Rust toolchain (MinGW)
         uses: dtolnay/rust-toolchain@stable
-
-      # 第三步 [最终修正]：使用您找到的 johnwason/vcpkg-action 安装 FFmpeg
-      - name: Install FFmpeg using vcpkg
-        uses: johnwason/vcpkg-action@v7
-        id: vcpkg
         with:
-          # 需要安装的包
-          pkgs: ffmpeg
-          # 关键参数：这个目标平台必须和 Rust MSVC 工具链的运行时库完全匹配
-          # x64-windows-static-md 是最安全、最正确的选择
-          triplet: x64-windows-static-md
-          # 根据文档建议，提供 token 以免达到 GitHub API 的速率限制
-          token: ${{ github.token }}
-          
-      # 第四步：缓存 Rust 依赖项
+          toolchain: stable-x86_64-pc-windows-gnu
+
+      # 第三步：安装 Perl (openssl-sys 依赖)
+      # 使用 runner 环境预装的 MSYS2/pacman 来安装
+      - name: Install Perl
+        run: pacman -S --noconfirm perl
+        shell: msys2 {0}
+
+      # 第四步：下载并解压官方提供的预编译静态库
+      - name: Download and extract pre-built static libraries
+        run: |
+          # 从官方缓存站下载 .zip 文件
+          curl -L -o static-lib.zip "https://build.prpr.moe/static-lib.zip"
+          # 解压到代码根目录，-o 选项表示覆盖所有文件
+          unzip -o static-lib.zip
+        shell: bash
+
+      # 第五步：缓存 Rust 依赖项
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      # 第五步：编译项目
-      # johnwason/vcpkg-action 会自动设置好 VCPKG_ROOT 环境变量
-      # Cargo 会自动检测到这个变量并找到 vcpkg 安装的库
+      # 第六步：编译项目 (使用官方命令)
       - name: Build Phira
-        run: cargo build --release
+        run: cargo build --release --bin phira-main
         shell: bash
 
-      # 第六步：准备打包文件
+      # 第七步：准备打包文件
       - name: Package assets
         run: |
-          mkdir release
-          cp target/release/phira.exe release/
-          cp -r assets release/
+          mkdir -p target/release/assets
+          # 官方指南提到根目录的 assets 可能不全，但我们先按步骤复制
+          cp -r assets/* target/release/assets/
+          # 将编译好的主程序也复制过来
+          cp target/release/phira-main.exe target/release/
+        shell: bash
 
-      # 第七步：上传构建产物
+      # 第八步：上传构建产物
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: phira-windows-build
-          path: release/
+          path: target/release/
