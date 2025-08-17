@@ -1,6 +1,6 @@
 # .github/workflows/build-windows.yml
 
-name: Build for Windows with Diagnostics
+name: Build for Windows
 
 on:
   workflow_dispatch:
@@ -10,69 +10,55 @@ jobs:
     runs-on: windows-2022
 
     steps:
-      # 第一步至第四步保持不变
+      # 第一步：检出代码
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: 'recursive'
+
+      # 第二步：安装 Rust 工具链
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      # 第三步：安装 LLVM
       - name: Install LLVM
         uses: KyleMayes/install-llvm-action@v1
         with:
           version: '15'
-      - name: Install FFmpeg
-        run: choco install ffmpeg -y
 
-      # ======================= 调试步骤开始 (已修正) =======================
+      # 第四步 [已修正]：安装 FFmpeg 完整开发者版
+      # 我们使用 ffmpeg-shared 包，它包含了编译所需的 .lib 和 .h 文件
+      - name: Install FFmpeg (Full Developer Version)
+        run: choco install ffmpeg-shared -y
 
-      # 调试步骤 1: 使用固定路径显示 FFmpeg 的文件结构
-      - name: '[DEBUG] Show FFmpeg Path and Directory Structure'
-        run: |
-          FFMPEG_INSTALL_DIR="C:/ProgramData/chocolatey/lib/ffmpeg/tools"
-          echo "--- Using Hardcoded FFmpeg Install Path ---"
-          echo "$FFMPEG_INSTALL_DIR"
-          echo "--- FFmpeg Directory Listing ---"
-          ls -R "$FFMPEG_INSTALL_DIR"
-        shell: bash
-
-      # 调试步骤 2: 确认 Rust 工具链信息 (无变化)
-      - name: '[DEBUG] Show Rust Toolchain Info'
-        run: rustc -vV
-        shell: bash
-
-      # 第五步：使用固定路径为编译器和运行时配置 FFmpeg 路径 (已修正)
+      # 第五步 [已修正]：为编译器和运行时配置 FFmpeg 路径
+      # 现在路径指向了 ffmpeg-shared 的安装位置
       - name: Configure FFmpeg environment
         run: |
-          FFMPEG_PATH="C:/ProgramData/chocolatey/lib/ffmpeg/tools"
-          echo "Using hardcoded FFMPEG_PATH: $FFMPEG_PATH"
+          FFMPEG_PATH="C:/ProgramData/chocolatey/lib/ffmpeg-shared/tools"
+          echo "Using FFMPEG_PATH: $FFMPEG_PATH"
           echo "FFMPEG_PATH=$FFMPEG_PATH" >> $GITHUB_ENV
           echo "$FFMPEG_PATH/bin" >> $GITHUB_PATH
           echo "LIB=$FFMPEG_PATH/lib" >> $GITHUB_ENV
         shell: bash
 
-      # 调试步骤 3: 检查编译前的所有环境变量 (无变化)
-      - name: '[DEBUG] Show Environment Variables before Build'
-        run: env | sort
-        shell: bash
-
-      # ======================= 调试步骤结束 =======================
-
       # 第六步：缓存依赖项
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      # 第七步：编译项目 (使用超详细模式)
-      - name: Build Phira (Very Verbose)
-        run: cargo build -vv --release
+      # 第七步：编译项目
+      - name: Build Phira
+        run: cargo build --release
         shell: bash
 
-      # 第八步和第九步保持不变
+      # 第八步：准备打包文件
       - name: Package assets
         run: |
           mkdir release
           cp target/release/phira.exe release/
           cp -r assets release/
+
+      # 第九步：上传构建产物
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
