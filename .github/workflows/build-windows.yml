@@ -14,9 +14,9 @@ jobs:
 
     steps:
       # 第一步：检出你的代码
-      # 使用 actions/checkout@v3 来获取你仓库中的代码
+      # 使用 actions/checkout@v4 来获取你仓库中的代码
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # 为了确保获取所有子模块（submodules），这在一些复杂项目中是必要的
           submodules: 'recursive'
@@ -55,10 +55,10 @@ jobs:
           cp -r assets release/
 
       # 第七步：上传构建产物
-      # 使用 actions/upload-artifact@v3 将 release 文件夹打包
+      # 使用 actions/upload-artifact@v4 将 release 文件夹打包
       # 这样你就可以在工作流运行结束后下载它了
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           # 设置下载文件的名字
           name: phira-windows-build
