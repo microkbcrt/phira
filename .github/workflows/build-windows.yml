@@ -10,53 +10,48 @@ jobs:
     runs-on: windows-2022
 
     steps:
-      # 第一步：检出你的代码
+      # 第一步至第四步保持不变
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: 'recursive'
-
-      # 第二步：安装 Rust 工具链
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-
-      # 第三步：安装 LLVM
       - name: Install LLVM
         uses: KyleMayes/install-llvm-action@v1
         with:
           version: '15'
-
-      # 第四步：安装 FFmpeg
       - name: Install FFmpeg
         run: choco install ffmpeg -y
 
-      # ======================= 调试步骤开始 =======================
+      # ======================= 调试步骤开始 (已修正) =======================
 
-      # 调试步骤 1: 确认 FFmpeg 的安装路径和文件结构
+      # 调试步骤 1: 使用固定路径显示 FFmpeg 的文件结构
       - name: '[DEBUG] Show FFmpeg Path and Directory Structure'
         run: |
-          echo "--- FFmpeg Install Path ---"
-          choco path ffmpeg --limit-output
+          FFMPEG_INSTALL_DIR="C:/ProgramData/chocolatey/lib/ffmpeg/tools"
+          echo "--- Using Hardcoded FFmpeg Install Path ---"
+          echo "$FFMPEG_INSTALL_DIR"
           echo "--- FFmpeg Directory Listing ---"
-          ls -R $(choco path ffmpeg --limit-output)
+          ls -R "$FFMPEG_INSTALL_DIR"
         shell: bash
 
-      # 调试步骤 2: 确认 Rust 工具链信息
+      # 调试步骤 2: 确认 Rust 工具链信息 (无变化)
       - name: '[DEBUG] Show Rust Toolchain Info'
         run: rustc -vV
         shell: bash
 
-      # 第五步：为编译器和运行时配置 FFmpeg 路径
+      # 第五步：使用固定路径为编译器和运行时配置 FFmpeg 路径 (已修正)
       - name: Configure FFmpeg environment
         run: |
-          FFMPEG_PATH=$(choco path ffmpeg --limit-output)
-          echo "Discovered FFMPEG_PATH: $FFMPEG_PATH"
+          FFMPEG_PATH="C:/ProgramData/chocolatey/lib/ffmpeg/tools"
+          echo "Using hardcoded FFMPEG_PATH: $FFMPEG_PATH"
           echo "FFMPEG_PATH=$FFMPEG_PATH" >> $GITHUB_ENV
           echo "$FFMPEG_PATH/bin" >> $GITHUB_PATH
           echo "LIB=$FFMPEG_PATH/lib" >> $GITHUB_ENV
         shell: bash
 
-      # 调试步骤 3: 检查编译前的所有环境变量
+      # 调试步骤 3: 检查编译前的所有环境变量 (无变化)
       - name: '[DEBUG] Show Environment Variables before Build'
         run: env | sort
         shell: bash
@@ -72,14 +67,12 @@ jobs:
         run: cargo build -vv --release
         shell: bash
 
-      # 第八步：准备打包文件 (如果编译成功)
+      # 第八步和第九步保持不变
       - name: Package assets
         run: |
           mkdir release
           cp target/release/phira.exe release/
           cp -r assets release/
-
-      # 第九步：上传构建产物 (如果编译成功)
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
