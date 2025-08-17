@@ -26,12 +26,16 @@ jobs:
         with:
           version: '15'
 
-      # 第四步：缓存依赖项
+      # 第四步：安装 FFmpeg (新增的关键步骤)
+      # 使用 Chocolatey 包管理器为 Windows 环境安装 FFmpeg
+      - name: Install FFmpeg
+        run: choco install ffmpeg -y
+
+      # 第五步：缓存依赖项
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      # 第五步：编译项目 (已修正)
-      # 直接在工作区根目录运行构建，这将生成所有可执行文件
+      # 第六步：编译项目
       - name: Build Phira
         run: cargo build --release
         env:
@@ -39,14 +43,14 @@ jobs:
           VCPKG_ROOT: "${{ github.workspace }}/vcpkg"
           VCPKGRS_DYNAMIC: "1"
 
-      # 第六步：准备打包文件
+      # 第七步：准备打包文件
       - name: Package assets
         run: |
           mkdir release
           cp target/release/phira.exe release/
           cp -r assets release/
 
-      # 第七步：上传构建产物
+      # 第八步：上传构建产物
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
