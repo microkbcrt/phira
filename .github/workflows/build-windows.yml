@@ -5,7 +5,7 @@ name: Build for Windows (Official Guide Method)
 on:
   workflow_dispatch:
 
-jobs: # <- 修正了这里的语法错误
+jobs:
   build-windows:
     runs-on: windows-2022
 
@@ -22,9 +22,9 @@ jobs: # <- 修正了这里的语法错误
         with:
           toolchain: stable-x86_64-pc-windows-gnu
 
-      # 第三步：初始化 MSYS2 环境并安装 Perl
+      # 第三步 [拼写已修正]：初始化 MSYS2 环境并安装 Perl
       - name: Setup MSYS2 and install Perl
-        uses: msys2/setup-ms-ys2@v2
+        uses: msys2/setup-msys2@v2 # <- 修正了这里的拼写错误
         with:
           update: true
           install: perl
@@ -45,10 +45,12 @@ jobs: # <- 修正了这里的语法错误
         run: cargo build --release --bin phira-main
         shell: bash
 
-      # 第七步：准备打包文件
+      # 第-七步：准备打包文件
       - name: Package assets
         run: |
+          # 确保目标目录存在
           mkdir -p target/release/assets
+          # 将 assets 文件夹的内容复制到 target/release/assets
           cp -r assets/* target/release/assets/
           # 将编译好的主程序也复制过来
           cp target/release/phira-main.exe target/release/
@@ -59,4 +61,5 @@ jobs: # <- 修正了这里的语法错误
         uses: actions/upload-artifact@v4
         with:
           name: phira-windows-build
+          # 我们上传整个 release 文件夹，里面包含了 exe 和 assets
           path: target/release/
